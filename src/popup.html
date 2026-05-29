@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SessionFox</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 300px;
+    background: #0f0f14;
+    color: #e8e8f0;
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  /* 顶部标题栏 */
+  .header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo { font-size: 18px; }
+  .title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #fff;
+  }
+  .subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 1px;
+  }
+  .manage-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.5);
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .manage-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  /* 当前标签 session 状态 */
+  .current-section {
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 8px;
+  }
+  .current-session {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .session-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .session-name-big {
+    font-weight: 600;
+    font-size: 14px;
+    color: #fff;
+    flex: 1;
+  }
+  .no-session {
+    color: rgba(255,255,255,0.3);
+    font-size: 12px;
+    font-style: italic;
+  }
+  .save-btn {
+    background: rgba(78, 205, 196, 0.15);
+    border: 1px solid rgba(78, 205, 196, 0.3);
+    border-radius: 5px;
+    color: #4ecdc4;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .save-btn:hover {
+    background: rgba(78, 205, 196, 0.25);
+  }
+
+  /* Session 列表 */
+  .sessions-section {
+    padding: 10px 0;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .sessions-section::-webkit-scrollbar { width: 4px; }
+  .sessions-section::-webkit-scrollbar-track { background: transparent; }
+  .sessions-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.12s;
+    position: relative;
+  }
+  .session-item:hover { background: rgba(255,255,255,0.05); }
+  .session-item.active { background: rgba(255,255,255,0.07); }
+  .session-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--session-color);
+  }
+
+  .item-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .item-name {
+    flex: 1;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+  }
+  .session-item.active .item-name { color: #fff; font-weight: 600; }
+
+  .item-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .session-item:hover .item-actions { opacity: 1; }
+
+  .icon-btn {
+    background: rgba(255,255,255,0.07);
+    border: none;
+    border-radius: 4px;
+    color: rgba(255,255,255,0.5);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.12s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .icon-btn.new-tab-btn:hover { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+  .icon-btn.switch-btn:hover { background: rgba(255, 200, 87, 0.2); color: #feca57; }
+
+  /* 底부 工具栏 */
+  .footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    gap: 8px;
+  }
+  .footer-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .footer-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-color: rgba(255,255,255,0.2);
+  }
+  .footer-btn.primary {
+    background: rgba(78, 205, 196, 0.12);
+    border-color: rgba(78, 205, 196, 0.25);
+    color: #4ecdc4;
+  }
+  .footer-btn.primary:hover {
+    background: rgba(78, 205, 196, 0.22);
+  }
+
+  /* Toast 提示 */
+  .toast {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(30,30,40,0.95);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: #fff;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">🦊</span>
+    <div>
+      <div class="title">SessionFox</div>
+      <div class="subtitle">多账号 Session 管理</div>
+    </div>
+  </div>
+  <button class="manage-btn" id="manageBtn">管理</button>
+</div>
+
+<!-- 当前标签状态 -->
+<div class="current-section">
+  <div class="section-label">当前标签</div>
+  <div class="current-session" id="currentSession">
+    <span class="no-session">未绑定 Session</span>
+  </div>
+</div>
+
+<!-- Session 列表 -->
+<div class="sessions-section" id="sessionList">
+  <!-- 由 JS 动态渲染 -->
+</div>
+
+<!-- 底部操作栏 -->
+<div class="footer">
+  <button class="footer-btn primary" id="newTabBtn">＋ 新标签选 Session</button>
+  <button class="footer-btn" id="openManageBtn">⚙ 管理 Session</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SessionFox — 管理</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f5f5f0;
+    color: #1a1a1a;
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 72px;
+  }
+
+  /* ── 顶部栏 ── */
+  .topbar {
+    background: rgba(245,245,240,0.97);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 16px 36px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 11px; }
+  .logo { font-size: 24px; }
+  .brand { font-size: 17px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.3px; }
+  .brand sub { font-size: 11px; color: #aaa; font-weight: 400; margin-left: 3px; }
+
+  /* ── 内容 ── */
+  .container { max-width: 700px; margin: 0 auto; padding: 32px 20px; }
+
+  .page-header { margin-bottom: 24px; }
+  .page-title { font-size: 21px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: #aaa; }
+
+  /* ── 存储概览卡片 ── */
+  .storage-card {
+    background: rgba(0,0,0,0.02);
+    border: 1px solid #e8e8e0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+  .storage-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .storage-title {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.7px; text-transform: uppercase;
+    color: #aaa;
+  }
+  .storage-numbers {
+    font-size: 12px; color: #777;
+  }
+  .storage-numbers strong { color: #1a1a1a; font-size: 14px; }
+
+  /* 进度条 */
+  .progress-track {
+    height: 5px; background: rgba(255,255,255,0.07);
+    border-radius: 999px; overflow: hidden; margin-bottom: 14px;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+    transition: width 0.5s ease;
+  }
+  .progress-fill.warn  { background: linear-gradient(90deg, #feca57, #ff9f43); }
+  .progress-fill.danger{ background: linear-gradient(90deg, #ff6b6b, #ff4757); }
+
+  /* 统计行 */
+  .storage-stats {
+    display: flex; gap: 20px; flex-wrap: wrap;
+  }
+  .stat-item {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .stat-label { font-size: 12px; color: #aaa; }
+  .stat-val { font-size: 12px; color: #333; font-weight: 500; }
+
+  /* ── Session 列表 ── */
+  .section-label {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.7px; text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
+
+  .cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+  .card {
+    background: #111;
+    border: 1px solid #e8e8e0;
+    border-radius: 12px;
+    padding: 13px 15px;
+    display: flex; align-items: center; gap: 12px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .card:hover { background: rgba(0,0,0,0.04); border-color: rgba(255,255,255,0.13); }
+
+  /* 颜色选择器 */
+  .color-wrap { position: relative; flex-shrink: 0; }
+  .color-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+    cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+  }
+  .color-circle:hover { transform: scale(1.12); border-color: #aaa; }
+  .color-inp {
+    position: absolute; inset: 0; opacity: 0;
+    cursor: pointer; border-radius: 50%; width: 100%; height: 100%;
+  }
+
+  /* 名称输入 */
+  .name-inp {
+    flex: 1; min-width: 0;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 7px; padding: 7px 11px;
+    font-size: 13px; color: #1a1a1a; font-family: inherit;
+    outline: none; transition: border-color 0.13s, background 0.13s;
+  }
+  .name-inp:focus {
+    border-color: rgba(78,205,196,0.45);
+    background: rgba(78,205,196,0.04);
+  }
+
+  /* 占用量徽章 */
+  .size-badge {
+    font-size: 11px; color: #aaa;
+    white-space: nowrap; min-width: 52px; text-align: right;
+    line-height: 1.4;
+  }
+  .size-badge .size-num { color: #555; font-weight: 500; }
+  .size-badge .size-cookies { display: block; font-size: 10px; color: rgba(255,255,255,0.22); }
+
+  /* 操作按钮 */
+  .card-btns { display: flex; gap: 4px; flex-shrink: 0; }
+  .cbtn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #e8e8e0;
+    border-radius: 6px; color: #888;
+    padding: 5px 10px; font-size: 11px; cursor: pointer;
+    transition: all 0.12s; white-space: nowrap;
+  }
+  .cbtn:hover { background: rgba(255,255,255,0.1); color: #1a1a1a; }
+  .cbtn.open:hover  { background: rgba(78,205,196,0.15); color: #4ecdc4; border-color: rgba(78,205,196,0.28); }
+  .cbtn.clear:hover { background: rgba(254,202,87,0.13); color: #feca57; border-color: rgba(254,202,87,0.28); }
+  .cbtn.del:hover   { background: rgba(255,107,107,0.15); color: #ff6b6b; border-color: rgba(255,107,107,0.28); }
+
+  /* 添加按钮 */
+  .add-btn {
+    width: 100%; padding: 12px;
+    background: rgba(255,255,255,0.025);
+    border: 1px dashed rgba(255,255,255,0.12);
+    border-radius: 12px; color: #aaa;
+    font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    margin-bottom: 32px;
+  }
+  .add-btn:hover {
+    background: rgba(78,205,196,0.05);
+    border-color: rgba(78,205,196,0.28); color: #4ecdc4;
+  }
+  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* 活跃标签区 */
+  .active-tabs-section { margin-bottom: 32px; }
+  .tab-list { display: flex; flex-direction: column; gap: 6px; }
+  .tab-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px;
+    background: rgba(0,0,0,0.02);
+    border: 1px solid rgba(0,0,0,0.04);
+    border-radius: 9px; font-size: 12px;
+  }
+  .tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tab-session { color: #444; font-weight: 600; min-width: 60px; }
+  .tab-url { color: #aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .no-tabs { font-size: 12px; color: rgba(255,255,255,0.22); font-style: italic; padding: 8px 0; }
+
+  /* ── 底部保存栏 ── */
+  .save-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(245,245,240,0.97);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 12px 36px;
+    display: flex; justify-content: flex-end; gap: 10px;
+    backdrop-filter: blur(10px); z-index: 200;
+  }
+  .btn {
+    padding: 9px 22px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.13s; font-family: inherit;
+  }
+  .btn-primary { background: #4ecdc4; color: #f5f5f0; }
+  .btn-primary:hover { background: #3dbdb5; }
+  .btn-ghost {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #666;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.09); color: #1a1a1a; }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 70px; right: 24px;
+    background: rgba(245,245,240,0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9px; padding: 9px 16px;
+    font-size: 13px; color: #1a1a1a;
+    opacity: 0; transform: translateX(8px);
+    transition: all 0.2s; pointer-events: none;
+    z-index: 9999; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  }
+  .toast.on { opacity: 1; transform: translateX(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">🦊</span>
+    <span class="brand">SessionFox</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="page-header">
+    <div class="page-title">管理 Session</div>
+    <div class="page-sub">每个 Session 拥有完全独立的 Cookie，同一网站多账号真正并行</div>
+  </div>
+
+  <!-- 存储概览 -->
+  <div class="storage-card">
+    <div class="storage-header">
+      <span class="storage-title">存储使用量</span>
+      <span class="storage-numbers"><strong id="storageUsed">--</strong> / 5 MB</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="storage-stats" id="storageStats">
+      <div class="stat-item">
+        <div class="stat-dot" style="background:#4ecdc4"></div>
+        <span class="stat-label">Session Cookie：</span>
+        <span class="stat-val" id="statCookies">--</span>
+      </div>
+      <div class="stat-item">
+        <div class="stat-dot" style="background:#feca57"></div>
+        <span class="stat-label">活跃标签绑定：</span>
+        <span class="stat-val" id="statTabs">--</span>
+      </div>
+      <div class="stat-item">
+        <div class="stat-dot" style="background:#96ceb4"></div>
+        <span class="stat-label">Session 数量：</span>
+        <span class="stat-val" id="statSessions">-- / 20</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session 列表 -->
+  <div class="section-label">我的 Session</div>
+  <div class="cards" id="cards"></div>
+  <button class="add-btn" id="addBtn">＋ 添加新 Session</button>
+
+  <!-- 活跃标签 -->
+  <div class="active-tabs-section">
+    <div class="section-label">当前活跃标签 <span id="activeCount" style="color:#777;font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="tab-list" id="tabList">
+      <div class="no-tabs">加载中...</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="save-bar">
+  <button class="btn btn-ghost" id="cancelBtn">取消</button>
+  <button class="btn btn-primary" id="saveBtn">💾 保存更改</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="manage.js"></script>
+</body>
+</html>
